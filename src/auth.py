@@ -4,6 +4,7 @@ import chainlit as cl
 import os
 from dotenv import load_dotenv
 import datetime
+import uuid
 
 # .envファイルから環境変数を読み込み
 load_dotenv()
@@ -67,9 +68,21 @@ class UserAuth:
             'role': role,
             'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat()
         }
+
         self.auth_table.put_item(Item=auth_item)
-        
-        return auth_item
+
+        # ChainlitDataテーブルへの書き込み
+        self.chainlit_table.put_item(
+            Item={
+                'PK': f"USER#{username}",
+                'SK': "USER",
+                'id': str(uuid.uuid4()),
+                'identifier': username,
+                'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                'metadata': {}
+            }
+        )
+
     
     def verify_user(self, username: str, password: str):
         """ユーザー認証"""
@@ -78,7 +91,9 @@ class UserAuth:
             return None
         
         hashed_password = self.hash_password(password)
+
         if user_auth['password'] == hashed_password:
+            print("test")
             return cl.User(
                 identifier=username,
                 metadata={"role": user_auth['role'], "provider": "credentials"}
